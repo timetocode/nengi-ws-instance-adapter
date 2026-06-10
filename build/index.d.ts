@@ -1,12 +1,18 @@
-/// <reference types="node" />
 import { Buffer } from 'buffer';
-import { IServerNetworkAdapter, User, InstanceNetwork, Context } from 'nengi';
-declare class wsInstanceAdapter implements IServerNetworkAdapter {
+import { IServerNetworkAdapter, User, InstanceNetwork } from 'nengi';
+import type { BinaryAdapter } from 'nengi';
+import { WebSocketServer } from 'ws';
+type WsListenOptions = number | {
+    port: number;
+    host?: string;
+};
+declare class WsInstanceAdapter implements IServerNetworkAdapter<Buffer, Buffer, WsListenOptions> {
     network: InstanceNetwork;
-    context: Context;
-    constructor(network: InstanceNetwork, config: any);
-    listen(port: number, ready: () => void): void;
+    binary: BinaryAdapter<Buffer>;
+    server: WebSocketServer | null;
+    constructor(network: InstanceNetwork, config?: any);
+    listen(options: WsListenOptions, ready?: () => void): void;
     disconnect(user: User, reason: any): void;
     send(user: User, buffer: Buffer): void;
 }
-export { wsInstanceAdapter };
+export { WsInstanceAdapter, WsListenOptions };

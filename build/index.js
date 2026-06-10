@@ -1,46 +1,60 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.wsInstanceAdapter = void 0;
+exports.WsInstanceAdapter = void 0;
+const buffer_1 = require("buffer");
 const nengi_1 = require("nengi");
 const nengi_buffers_1 = require("nengi-buffers");
 const ws_1 = require("ws");
 const ALWAYS_BINARY = { binary: true };
-class wsInstanceAdapter {
-    constructor(network, config) {
-        this.network = network;
-        this.context = this.network.instance.context;
+function toBuffer(data) {
+    if (buffer_1.Buffer.isBuffer(data)) {
+        return data;
     }
-    // consider a promise?
-    listen(port, ready) {
-        const wss = new ws_1.WebSocketServer({ port });
+    if (Array.isArray(data)) {
+        return buffer_1.Buffer.concat(data);
+    }
+    if (data instanceof ArrayBuffer) {
+        return buffer_1.Buffer.from(data);
+    }
+    const view = data;
+    return buffer_1.Buffer.from(view.buffer, view.byteOffset, view.byteLength);
+}
+class WsInstanceAdapter {
+    constructor(network, config = {}) {
+        var _a;
+        this.server = null;
+        this.network = network;
+        this.binary = (_a = config.binary) !== null && _a !== void 0 ? _a : nengi_buffers_1.bufferBinary;
+    }
+    listen(options, ready) {
+        const listenOptions = typeof options === 'number' ? { port: options } : options;
+        const wss = new ws_1.WebSocketServer(listenOptions, ready);
+        this.server = wss;
         wss.on('connection', (ws, req) => {
-            const user = new nengi_1.User(ws);
-            user.socket = ws;
+            var _a;
+            const user = new nengi_1.User(ws, this);
             this.network.onOpen(user);
-            // @ts-ignore
-            user.remoteAddress = req.socket.remoteAddress;
+            user.remoteAddress = (_a = req.socket.remoteAddress) !== null && _a !== void 0 ? _a : null;
             if (req.headers['x-forwarded-for']) {
-                // @ts-ignore
-                user.remoteAddress = req.headers['x-forwarded-for'].split(',')[0].trim();
+                const forwardedFor = Array.isArray(req.headers['x-forwarded-for'])
+                    ? req.headers['x-forwarded-for'][0]
+                    : req.headers['x-forwarded-for'];
+                user.remoteAddress = forwardedFor.split(',')[0].trim();
             }
             ws.on('message', (data) => {
-                // @ts-ignore
-                const binaryReader = new nengi_buffers_1.BufferReader(data);
-                this.network.onMessage(user, binaryReader, nengi_buffers_1.BufferWriter);
+                this.network.onMessage(user, toBuffer(data));
             });
             ws.on('close', () => {
                 this.network.onClose(user);
             });
         });
-        // is it actually ready though? no time has gone by
-        ready();
     }
     disconnect(user, reason) {
-        // TODO this doesn't send a reason hmm
-        user.socket.terminate();
+        const payload = typeof reason === 'string' ? reason : JSON.stringify(reason !== null && reason !== void 0 ? reason : 'closed');
+        user.socket.close(1000, payload);
     }
     send(user, buffer) {
         user.socket.send(buffer, ALWAYS_BINARY);
     }
 }
-exports.wsInstanceAdapter = wsInstanceAdapter;
+exports.WsInstanceAdapter = WsInstanceAdapter;

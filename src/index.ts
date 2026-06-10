@@ -4,60 +4,76 @@ import { Buffer } from 'buffer'
 import {
     IServerNetworkAdapter,
     User,
-    UserConnectionState,
-    InstanceNetwork,
-    Context
+    InstanceNetwork
 } from 'nengi'
+import type { BinaryAdapter } from 'nengi'
 
-import { BufferReader, BufferWriter } from 'nengi-buffers'
+import { bufferBinary } from 'nengi-buffers'
 
 import { WebSocketServer } from 'ws'
+import type { RawData } from 'ws'
 
 const ALWAYS_BINARY = { binary: true }
 
-class wsInstanceAdapter implements IServerNetworkAdapter {
-    network: InstanceNetwork
-    context: Context
+type WsListenOptions = number | {
+    port: number
+    host?: string
+}
 
-    constructor(network: InstanceNetwork, config: any) {
+function toBuffer(data: RawData): Buffer {
+    if (Buffer.isBuffer(data)) {
+        return data
+    }
+    if (Array.isArray(data)) {
+        return Buffer.concat(data)
+    }
+    if (data instanceof ArrayBuffer) {
+        return Buffer.from(data)
+    }
+    const view = data as ArrayBufferView
+    return Buffer.from(view.buffer, view.byteOffset, view.byteLength)
+}
+
+class WsInstanceAdapter implements IServerNetworkAdapter<Buffer, Buffer, WsListenOptions> {
+    network: InstanceNetwork
+    binary: BinaryAdapter<Buffer>
+    server: WebSocketServer | null = null
+
+    constructor(network: InstanceNetwork, config: any = {}) {
         this.network = network
-        this.context = this.network.instance.context
+        this.binary = config.binary ?? bufferBinary
     }
 
-    // consider a promise?
-    listen(port: number, ready: () => void) {
-        const wss = new WebSocketServer({ port })
+    listen(options: WsListenOptions, ready?: () => void) {
+        const listenOptions = typeof options === 'number' ? { port: options } : options
+        const wss = new WebSocketServer(listenOptions, ready)
+        this.server = wss
 
         wss.on('connection', (ws, req) => {
-            const user = new User(ws)
-            user.socket = ws
+            const user = new User(ws, this)
             this.network.onOpen(user)
 
-            // @ts-ignore
-            user.remoteAddress = req.socket.remoteAddress
+            user.remoteAddress = req.socket.remoteAddress ?? null
             if (req.headers['x-forwarded-for']) {
-                // @ts-ignore
-                user.remoteAddress = req.headers['x-forwarded-for'].split(',')[0].trim()
+                const forwardedFor = Array.isArray(req.headers['x-forwarded-for'])
+                    ? req.headers['x-forwarded-for'][0]
+                    : req.headers['x-forwarded-for']
+                user.remoteAddress = forwardedFor.split(',')[0].trim()
             }
 
             ws.on('message', (data) => {
-                // @ts-ignore
-                const binaryReader = new BufferReader(data)
-                this.network.onMessage(user, binaryReader, BufferWriter)
+                this.network.onMessage(user, toBuffer(data))
             })
 
             ws.on('close', () => {
                 this.network.onClose(user)
             })
         })
-
-        // is it actually ready though? no time has gone by
-        ready()
     }
 
     disconnect(user: User, reason: any): void {
-        // TODO this doesn't send a reason hmm
-        user.socket.terminate()
+        const payload = typeof reason === 'string' ? reason : JSON.stringify(reason ?? 'closed')
+        user.socket.close(1000, payload)
     }
 
     send(user: User, buffer: Buffer): void {
@@ -65,4 +81,4 @@ class wsInstanceAdapter implements IServerNetworkAdapter {
     }
 }
 
-export { wsInstanceAdapter }
+export { WsInstanceAdapter, WsListenOptions }
