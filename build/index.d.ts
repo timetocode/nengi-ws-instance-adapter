@@ -1,6 +1,6 @@
 import { Buffer } from 'buffer';
-import { IServerNetworkAdapter, User, InstanceNetwork } from 'nengi';
-import type { BinaryAdapter } from 'nengi';
+import { User } from 'nengi';
+import type { BinaryAdapter, IServerNetworkAdapter, InstanceNetwork } from 'nengi';
 import { WebSocketServer } from 'ws';
 type WsListenOptions = number | {
     port: number;

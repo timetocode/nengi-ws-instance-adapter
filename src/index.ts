@@ -2,11 +2,9 @@
 import { Buffer } from 'buffer'
 
 import {
-    IServerNetworkAdapter,
-    User,
-    InstanceNetwork
+    User
 } from 'nengi'
-import type { BinaryAdapter } from 'nengi'
+import type { BinaryAdapter, IServerNetworkAdapter, InstanceNetwork } from 'nengi'
 
 import { bufferBinary } from 'nengi-buffers'
 
