@@ -53,6 +53,9 @@ class WsInstanceAdapter {
         const payload = typeof reason === 'string' ? reason : JSON.stringify(reason !== null && reason !== void 0 ? reason : 'closed');
         user.socket.close(1000, payload);
     }
+    terminate(user, reason) {
+        user.socket.terminate();
+    }
     send(user, buffer) {
         user.socket.send(buffer, ALWAYS_BINARY);
     }

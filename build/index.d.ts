@@ -13,6 +13,7 @@ declare class WsInstanceAdapter implements IServerNetworkAdapter<Buffer, Buffer,
     constructor(network: InstanceNetwork, config?: any);
     listen(options: WsListenOptions, ready?: () => void): void;
     disconnect(user: User, reason: any): void;
+    terminate(user: User, reason: any): void;
     send(user: User, buffer: Buffer): void;
 }
 export { WsInstanceAdapter, WsListenOptions };

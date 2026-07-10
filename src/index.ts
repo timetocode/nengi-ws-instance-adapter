@@ -74,6 +74,10 @@ class WsInstanceAdapter implements IServerNetworkAdapter<Buffer, Buffer, WsListe
         user.socket.close(1000, payload)
     }
 
+    terminate(user: User, reason: any): void {
+        user.socket.terminate()
+    }
+
     send(user: User, buffer: Buffer): void {
         user.socket.send(buffer, ALWAYS_BINARY)
     }
