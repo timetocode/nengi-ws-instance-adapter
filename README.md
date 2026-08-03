@@ -6,9 +6,9 @@ the `nengi-buffers` binary backend.
 Keep the complete Nengi package family on one exact version:
 
 ```sh
-npm install nengi@2.0.0-rc.125 \
-    nengi-ws-instance-adapter@2.0.0-rc.125 \
-    nengi-buffers@2.0.0-rc.125
+npm install nengi@2.0.0-rc.126 \
+    nengi-ws-instance-adapter@2.0.0-rc.126 \
+    nengi-buffers@2.0.0-rc.126
 ```
 
 ```ts
