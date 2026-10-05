@@ -1,7 +1,6 @@
 import { Buffer } from 'buffer';
-import { User } from 'nengi';
-import type { BinaryAdapter, IServerNetworkAdapter, InstanceNetwork } from 'nengi';
-import { WebSocketServer } from 'ws';
+import type { BinaryAdapter, IServerNetworkAdapter, ServerAdapterHost, ServerConnection } from 'nengi';
+import { WebSocket, WebSocketServer } from 'ws';
 type WsInstanceAdapterConfig = {
     binary?: BinaryAdapter<Buffer>;
     maxPayloadLength?: number;
@@ -14,16 +13,19 @@ type WsListenOptions = number | {
     host?: string;
 };
 declare class WsInstanceAdapter implements IServerNetworkAdapter<Buffer, Buffer, WsListenOptions> {
-    network: InstanceNetwork;
+    network: ServerAdapterHost;
     binary: BinaryAdapter<Buffer>;
     server: WebSocketServer | null;
     private config;
     private maxPayloadLength;
     private maxBufferedBytes;
-    constructor(network: InstanceNetwork, config?: WsInstanceAdapterConfig);
+    private shutdownPromise?;
+    readonly serverAdapterVersion: 1;
+    constructor(network: ServerAdapterHost, config?: WsInstanceAdapterConfig);
     listen(options: WsListenOptions, ready?: () => void): void;
-    disconnect(user: User, reason: any): void;
-    terminate(user: User, reason: any): void;
-    send(user: User, buffer: Buffer): void;
+    shutdown(reason?: any): Promise<void>;
+    disconnect(user: ServerConnection<WebSocket>, reason: any): void;
+    terminate(user: ServerConnection<WebSocket>, reason: any): void;
+    send(user: ServerConnection<WebSocket>, buffer: Buffer): void;
 }
 export { WsInstanceAdapter, WsListenOptions, WsInstanceAdapterConfig };

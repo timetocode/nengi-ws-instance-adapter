@@ -1,7 +1,7 @@
 // A separate process makes an unhandled ws error an observable test failure.
 const assert = require('node:assert/strict')
 const { once } = require('node:events')
-const { Instance, Context, Binary, BinarySection, defineMessageSchema, NetworkEvent } = require('nengi')
+const { Instance, Context, Binary, defineMessageSchema, NetworkEvent } = require('nengi')
 const { WebSocket } = require('ws')
 const { WsInstanceAdapter } = require('../build')
 
@@ -11,7 +11,7 @@ async function run() {
     const instance = new Instance(context, { limits: { maxPacketBytes: 32 } })
     let coreLimitEvents = 0
     instance.onNetworkLimit = () => coreLimitEvents++
-    const adapter = new WsInstanceAdapter(instance.network)
+    const adapter = new WsInstanceAdapter(instance.adapterHost)
     // Isolate transport handling from authentication in this fixture.
     const open = instance.network.onOpen.bind(instance.network)
     instance.network.onOpen = user => {
@@ -39,7 +39,8 @@ async function run() {
     // The inherited native cap must reject the message before core decoding.
     assert.equal(coreLimitEvents, 0)
     assert.equal(instance.users.size, 1)
-    healthy.send(Buffer.from([BinarySection.Commands, 1, 1, 42]))
+    // Wire fixture: Commands section (6), one command, schema 1, UInt8 value 42.
+    healthy.send(Buffer.from([6, 1, 1, 42]))
     const deadline = Date.now() + 1000
     let delivered = false
     while (Date.now() < deadline && !delivered) {
